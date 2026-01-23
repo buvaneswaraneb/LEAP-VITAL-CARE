@@ -1,0 +1,674 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Vital Care System</title>
+
+  <!-- ✅ Browser tab icon -->
+  <link rel="icon" type="image/svg+xml" href="header.svg">
+
+  <link href="https://fonts.googleapis.com/css2?family=Gaegu&display=swap" rel="stylesheet">
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    body {
+      font-family: 'Gaegu', cursive;
+      background-color: #9ABCC7;
+      padding: 20px;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      min-height: 100vh;
+    }
+
+    .container {
+      width: 100%;
+      max-width: 400px;
+      text-align: center;
+      position: relative;
+    }
+
+    .page {
+      display: none;
+      background: #9ABCC7;
+      padding: 20px;
+      border-radius: 20px;
+    }
+
+    .page.active {
+      display: block;
+    }
+
+    h1 {
+      font-size: 48px;
+      margin-bottom: 30px;
+      color: #2c3e50;
+    }
+
+    .label {
+      font-size: 24px;
+      margin: 15px 0 8px 0;
+      color: #2c3e50;
+      text-align: left;
+    }
+
+    .name-section {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 30px;
+    }
+
+    .name-section .label {
+      margin: 0;
+      font-size: 28px;
+    }
+
+    input {
+      font-family: 'Gaegu', cursive;
+      font-size: 22px;
+      padding: 12px;
+      width: 100%;
+      border: none;
+      border-radius: 8px;
+      background-color: #D4D4D4;
+      color: #2c3e50;
+      margin-bottom: 15px;
+    }
+
+    .patient-name {
+      font-size: 28px;
+      color: #2c3e50;
+      margin: 0;
+    }
+
+    .chart-container {
+      background-color: #D4D4D4;
+      border-radius: 8px;
+      padding: 20px;
+      margin: 15px 0;
+      position: relative;
+      height: 150px;
+    }
+
+    .current-value {
+      position: absolute;
+      top: 10px;
+      right: 15px;
+      font-size: 20px;
+      color: #2c3e50;
+      font-weight: bold;
+    }
+
+    canvas {
+      width: 100%;
+      height: 100%;
+    }
+
+    .photo-placeholder {
+      background-color: #D4D4D4;
+      border-radius: 8px;
+      padding: 20px;
+      margin: 30px 0;
+      min-height: 300px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      overflow: hidden;
+    }
+
+    .photo-placeholder img {
+      max-width: 100%;
+      max-height: 100%;
+      border-radius: 8px;
+    }
+
+    .placeholder-text {
+      font-size: 24px;
+      color: #888;
+    }
+
+    .buttons {
+      display: flex;
+      gap: 15px;
+      margin-top: 30px;
+      justify-content: center;
+      flex-wrap: wrap;
+    }
+
+    button {
+      font-family: 'Gaegu', cursive;
+      font-size: 28px;
+      padding: 15px 35px;
+      background-color: #D4D4D4;
+      border: none;
+      border-radius: 8px;
+      cursor: pointer;
+      color: #2c3e50;
+      transition: transform 0.1s;
+    }
+
+    button:hover {
+      transform: scale(1.05);
+    }
+
+    button:active {
+      transform: scale(0.95);
+    }
+
+    .section-title {
+      font-size: 32px;
+      margin-top: 25px;
+      margin-bottom: 15px;
+      color: #2c3e50;
+    }
+
+    .link-text {
+      margin-top: 20px;
+      font-size: 20px;
+      color: #2c3e50;
+      cursor: pointer;
+      text-decoration: underline;
+    }
+
+    .error {
+      color: #e74c3c;
+      font-size: 20px;
+      margin: 10px 0;
+    }
+
+    .location-placeholder {
+      background-color: #D4D4D4;
+      border-radius: 8px;
+      padding: 40px 20px;
+      margin: 30px 0;
+      min-height: 400px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .location-placeholder h2 {
+      font-size: 36px;
+      color: #2c3e50;
+      margin-bottom: 15px;
+    }
+
+    .location-placeholder p {
+      font-size: 24px;
+      color: #666;
+      text-align: center;
+    }
+
+    .logout-btn {
+      position: absolute;
+      top: 20px;
+      right: 20px;
+      font-size: 20px;
+      padding: 8px 20px;
+      background-color: #e74c3c;
+      color: white;
+    }
+
+    .logout-btn:hover {
+      background-color: #c0392b;
+    }
+
+    .connection-status {
+      font-size: 18px;
+      color: #666;
+      margin-top: 10px;
+    }
+
+    .connection-status.connected {
+      color: #27ae60;
+    }
+
+    .connection-status.disconnected {
+      color: #e74c3c;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <!-- LOGIN PAGE -->
+    <div id="loginPage" class="page active">
+      <h1>Vital Care</h1>
+      <div class="label">Username:</div>
+      <input type="text" id="loginUsername" placeholder="Enter username">
+      
+      <div class="label">Date of Birth:</div>
+      <input type="date" id="loginDOB">
+      
+      <div class="error" id="loginError"></div>
+      
+      <div class="buttons">
+        <button onclick="login()">Login</button>
+      </div>
+      
+      <div class="link-text" onclick="showPage('signupPage')">Don't have an account? Sign Up</div>
+    </div>
+
+    <!-- SIGNUP PAGE -->
+    <div id="signupPage" class="page">
+      <h1>Sign Up</h1>
+      
+      <div class="label">Name:</div>
+      <input type="text" id="signupName" placeholder="Patient's full name">
+      
+      <div class="label">Age:</div>
+      <input type="number" id="signupAge" placeholder="Age">
+      
+      <div class="label">Date of Birth:</div>
+      <input type="date" id="signupDOB">
+      
+      <div class="label">Username:</div>
+      <input type="text" id="signupUsername" placeholder="Choose username">
+      
+      <div class="error" id="signupError"></div>
+      
+      <div class="buttons">
+        <button onclick="signup()">Sign Up</button>
+      </div>
+      
+      <div class="link-text" onclick="showPage('loginPage')">Already have an account? Login</div>
+    </div>
+
+    <!-- CAMERA PAGE -->
+    <div id="cameraPage" class="page">
+      <button class="logout-btn" onclick="logout()">Logout</button>
+      <h1>camera</h1>
+      
+      <div class="name-section">
+        <div class="label">Patients Name:</div>
+        <div class="patient-name" id="cameraPatientName">Patient Name</div>
+      </div>
+      
+      <div class="photo-placeholder" id="photoDisplay">
+        <span class="placeholder-text">No photo captured</span>
+      </div>
+      
+      <div class="buttons">
+        <button onclick="capturePhoto()">Photo</button>
+        <button onclick="showPage('locationPage')">locate</button>
+        <button onclick="showPage('statsPage')">stats</button>
+      </div>
+    </div>
+
+    <!-- VITAL CARE (STATS) PAGE -->
+    <div id="statsPage" class="page">
+      <button class="logout-btn" onclick="logout()">Logout</button>
+      <h1>Vital Care</h1>
+      
+      <div class="name-section">
+        <div class="label">Patients Name:</div>
+        <div class="patient-name" id="statsPatientName">Patient Name</div>
+      </div>
+      
+      <div class="connection-status" id="connectionStatus">Connecting...</div>
+      
+      <div class="chart-container">
+        <div class="current-value" id="tempValue">curr Temp: --</div>
+        <canvas id="tempChart"></canvas>
+      </div>
+      <div class="section-title">Patients temperature</div>
+      
+      <div class="chart-container">
+        <div class="current-value" id="pulseValue">curr pulse: --</div>
+        <canvas id="pulseChart"></canvas>
+      </div>
+      <div class="section-title">Patients pulse</div>
+      
+      <div class="buttons">
+        <button onclick="showPage('locationPage')">locate</button>
+        <button onclick="showPage('cameraPage')">photo</button>
+      </div>
+    </div>
+
+    <!-- LOCATION PAGE -->
+    <div id="locationPage" class="page">
+      <button class="logout-btn" onclick="logout()">Logout</button>
+      <h1>Lokation</h1>
+      
+      <div class="name-section">
+        <div class="label">Patients Name:</div>
+        <div class="patient-name" id="locationPatientName">Patient Name</div>
+      </div>
+      
+      <div class="location-placeholder">
+        <h2>Location Tracking</h2>
+        <p>This feature is coming soon!</p>
+        <p style="margin-top: 20px; font-size: 20px;">Patient location will be displayed here</p>
+      </div>
+      
+      <div class="buttons">
+        <button onclick="showPage('cameraPage')">photo</button>
+        <button onclick="showPage('statsPage')">stats</button>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    // Data storage (using variables instead of localStorage)
+    let currentUser = null;
+    let tempData = [];
+    let pulseData = [];
+    const MAX_DATA_POINTS = 20;
+    let updateInterval = null;
+    let savedUsers = {
+      // Test admin account
+      'admin': {
+        name: 'Admin User',
+        age: '30',
+        dob: '1111-11-11',
+        username: 'admin'
+      }
+    }; // Store user accounts
+    let savedPhotos = {}; // Store photos
+
+    // Page navigation
+    function showPage(pageId) {
+      document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+      document.getElementById(pageId).classList.add('active');
+      
+      if (pageId === 'statsPage') {
+        startDataUpdates();
+      } else {
+        stopDataUpdates();
+      }
+    }
+
+    // Sign up
+    function signup() {
+      const name = document.getElementById('signupName').value.trim();
+      const age = document.getElementById('signupAge').value.trim();
+      const dob = document.getElementById('signupDOB').value;
+      const username = document.getElementById('signupUsername').value.trim();
+      
+      if (!name || !age || !dob || !username) {
+        document.getElementById('signupError').textContent = 'Please fill all fields';
+        return;
+      }
+      
+      const userData = { name, age, dob, username };
+      savedUsers[username] = userData;
+      currentUser = userData;
+      
+      document.getElementById('signupError').textContent = '';
+      loadUserSession();
+    }
+
+    // Login
+    function login() {
+      const username = document.getElementById('loginUsername').value.trim();
+      const dob = document.getElementById('loginDOB').value;
+      
+      if (!username || !dob) {
+        document.getElementById('loginError').textContent = 'Please enter username and DOB';
+        return;
+      }
+      
+      if (!savedUsers[username]) {
+        document.getElementById('loginError').textContent = 'No account found. Please sign up first.';
+        return;
+      }
+      
+      const userData = savedUsers[username];
+      if (userData.dob === dob) {
+        currentUser = userData;
+        document.getElementById('loginError').textContent = '';
+        loadUserSession();
+      } else {
+        document.getElementById('loginError').textContent = 'Invalid username or date of birth';
+      }
+    }
+
+    // Load user session
+    function loadUserSession() {
+      document.getElementById('cameraPatientName').textContent = currentUser.name;
+      document.getElementById('statsPatientName').textContent = currentUser.name;
+      document.getElementById('locationPatientName').textContent = currentUser.name;
+      
+      // Load saved photo if exists
+      if (savedPhotos[currentUser.username]) {
+        const photoDisplay = document.getElementById('photoDisplay');
+        photoDisplay.innerHTML = `<img src="${savedPhotos[currentUser.username]}" alt="Patient Photo">`;
+      }
+      
+      showPage('cameraPage');
+    }
+
+    // Capture photo
+    async function capturePhoto() {
+      if (!currentUser) return;
+      
+      const photoDisplay = document.getElementById('photoDisplay');
+      photoDisplay.innerHTML = '<span class="placeholder-text">Capturing photo...</span>';
+      
+      try {
+        const response = await fetch(`http://${currentUser.ip}/capture`, {
+          method: 'GET',
+          mode: 'cors',
+          cache: 'no-cache'
+        });
+        
+        if (!response.ok) {
+          throw new Error(`HTTP error! status: ${response.status}`);
+        }
+        
+        const blob = await response.blob();
+        const imageUrl = URL.createObjectURL(blob);
+        
+        // Display photo
+        photoDisplay.innerHTML = `<img src="${imageUrl}" alt="Patient Photo">`;
+        
+        // Convert to base64 and save
+        const reader = new FileReader();
+        reader.onloadend = function() {
+          savedPhotos[currentUser.username] = reader.result;
+        };
+        reader.readAsDataURL(blob);
+        
+      } catch (error) {
+        console.error('Error capturing photo:', error);
+        photoDisplay.innerHTML = '<span class="placeholder-text">Failed to capture photo</span>';
+        alert(`Failed to capture photo. 
+
+Troubleshooting:
+1. Check ESP32 IP address: ${currentUser.ip}
+2. Make sure ESP32 is powered on and connected to WiFi
+3. Try accessing http://${currentUser.ip}/capture directly in browser
+4. Check Serial Monitor for error messages
+
+Error: ${error.message}`);
+      }
+    }
+
+    // Setup canvases
+    const tempCanvas = document.getElementById('tempChart');
+    const pulseCanvas = document.getElementById('pulseChart');
+    const tempCtx = tempCanvas.getContext('2d');
+    const pulseCtx = pulseCanvas.getContext('2d');
+
+    function resizeCanvas() {
+      const dpr = window.devicePixelRatio || 1;
+      
+      // Resize temp canvas
+      const tempRect = tempCanvas.getBoundingClientRect();
+      tempCanvas.width = tempRect.width * dpr;
+      tempCanvas.height = tempRect.height * dpr;
+      tempCtx.scale(dpr, dpr);
+      
+      // Resize pulse canvas
+      const pulseRect = pulseCanvas.getBoundingClientRect();
+      pulseCanvas.width = pulseRect.width * dpr;
+      pulseCanvas.height = pulseRect.height * dpr;
+      pulseCtx.scale(dpr, dpr);
+      
+      // Redraw charts
+      if (tempData.length > 0) {
+        drawChart(tempCtx, tempData, tempCanvas);
+      }
+      if (pulseData.length > 0) {
+        drawChart(pulseCtx, pulseData, pulseCanvas);
+      }
+    }
+    
+    // Wait for canvas to be visible before resizing
+    setTimeout(resizeCanvas, 100);
+    window.addEventListener('resize', resizeCanvas);
+
+    // Draw chart
+    function drawChart(ctx, data, canvas) {
+      const rect = canvas.getBoundingClientRect();
+      const width = rect.width;
+      const height = rect.height;
+      
+      ctx.clearRect(0, 0, width, height);
+      
+      if (data.length < 2) return;
+
+      ctx.strokeStyle = '#2c3e50';
+      ctx.lineWidth = 3;
+      ctx.lineCap = 'round';
+      ctx.lineJoin = 'round';
+      ctx.beginPath();
+
+      const padding = 20;
+      const chartWidth = width - padding * 2;
+      const chartHeight = height - padding * 2;
+      const stepX = chartWidth / (MAX_DATA_POINTS - 1);
+
+      // Filter out invalid values
+      const validData = data.filter(v => v !== null && v !== undefined && !isNaN(v) && v > -100);
+      
+      if (validData.length < 2) return;
+
+      const min = Math.min(...validData);
+      const max = Math.max(...validData);
+      const range = max - min || 1;
+
+      let firstPoint = true;
+      data.forEach((value, index) => {
+        if (value === null || value === undefined || isNaN(value) || value <= -100) {
+          return;
+        }
+        
+        const x = padding + index * stepX;
+        const y = height - padding - ((value - min) / range) * chartHeight;
+        
+        if (firstPoint) {
+          ctx.moveTo(x, y);
+          firstPoint = false;
+        } else {
+          ctx.lineTo(x, y);
+        }
+      });
+
+      ctx.stroke();
+      
+      // Draw points
+      ctx.fillStyle = '#2c3e50';
+      data.forEach((value, index) => {
+        if (value === null || value === undefined || isNaN(value) || value <= -100) {
+          return;
+        }
+        
+        const x = padding + index * stepX;
+        const y = height - padding - ((value - min) / range) * chartHeight;
+        
+        ctx.beginPath();
+        ctx.arc(x, y, 4, 0, Math.PI * 2);
+        ctx.fill();
+      });
+    }
+
+    // Fetch data from ngrok API
+async function fetchData() {
+  if (!currentUser) return;
+
+  const statusEl = document.getElementById('connectionStatus');
+  const API_URL = 'https://nonsignificantly-bilgier-particia.ngrok-free.dev/api/data';
+
+  try {
+    const response = await fetch(API_URL, {
+      method: 'GET',
+      headers: {
+        'ngrok-skip-browser-warning': 'true'
+      },
+      cache: 'no-cache'
+    });
+
+    const data = await response.json();
+
+    statusEl.textContent = 'Connected ✓';
+    statusEl.className = 'connection-status connected';
+
+    document.getElementById('tempValue').textContent =
+      `curr Temp: ${data.temperature.toFixed(1)}°C`;
+
+    document.getElementById('pulseValue').textContent =
+      `curr pulse: ${data.bpm} BPM`;
+
+    if (data.temperature > -100 && data.temperature < 100)
+      tempData.push(data.temperature);
+
+    if (data.bpm >= 0 && data.bpm < 300)
+      pulseData.push(data.bpm);
+
+    if (tempData.length > MAX_DATA_POINTS) tempData.shift();
+    if (pulseData.length > MAX_DATA_POINTS) pulseData.shift();
+
+    drawChart(tempCtx, tempData, tempCanvas);
+    drawChart(pulseCtx, pulseData, pulseCanvas);
+
+  } catch (error) {
+    console.error('Error fetching data:', error);
+    statusEl.textContent = 'Disconnected ✗';
+    statusEl.className = 'connection-status disconnected';
+  }
+}
+    function startDataUpdates() {
+      if (updateInterval) return;
+      
+      // Clear old data when starting fresh
+      tempData = [];
+      pulseData = [];
+      
+      // Resize canvases
+      setTimeout(resizeCanvas, 100);
+      
+      updateInterval = setInterval(fetchData, 2000);
+      fetchData(); // Fetch immediately
+    }
+
+    function stopDataUpdates() {
+      if (updateInterval) {
+        clearInterval(updateInterval);
+        updateInterval = null;
+      }
+    }
+
+    // Logout function
+    function logout() {
+      stopDataUpdates();
+      currentUser = null;
+      tempData = [];
+      pulseData = [];
+      
+      // Clear login form
+      document.getElementById('loginUsername').value = '';
+      document.getElementById('loginDOB').value = '';
+      document.getElementById('loginError').textContent = '';
+      
+      showPage('loginPage');
+    }
+  </script>
+</body>
+</html> 
