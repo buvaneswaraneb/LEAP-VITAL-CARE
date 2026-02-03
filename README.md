@@ -1,1269 +1,852 @@
-# Vital Care - IoT Patient Monitoring System
+# LEAP VITAL CARE
 
-A comprehensive IoT-based patient monitoring system that combines ESP32 sensors, Flask backend, and responsive web interfaces to provide real-time health monitoring and emergency alert capabilities.
+**IoT-Based Real-Time Patient Monitoring and Emergency Alert System**
+
+LEAP VITAL CARE is a comprehensive healthcare monitoring platform that integrates ESP32 microcontroller sensors with a Flask backend server and responsive web interfaces to enable continuous patient vital sign tracking, GPS location monitoring, and emergency alert capabilities for healthcare providers and caregivers.
 
 ---
 
 ## Table of Contents
 
 - [System Overview](#system-overview)
-- [Architecture](#architecture)
-- [Features](#features)
-- [System Requirements](#system-requirements)
-- [Installation & Setup](#installation--setup)
+- [System Architecture](#system-architecture)
+- [Core Features](#core-features)
+- [Technical Stack](#technical-stack)
+- [Hardware Requirements](#hardware-requirements)
+- [Software Requirements](#software-requirements)
+- [Installation Guide](#installation-guide)
 - [Configuration](#configuration)
-- [Usage Guide](#usage-guide)
 - [API Documentation](#api-documentation)
+- [Usage Instructions](#usage-instructions)
 - [Troubleshooting](#troubleshooting)
 - [File Structure](#file-structure)
-- [Technologies Used](#technologies-used)
+- [Future Enhancements](#future-enhancements)
 
 ---
 
 ## System Overview
 
-Vital Care is a real-time patient monitoring system designed for healthcare providers and caregivers. The system monitors vital signs (temperature, heart rate) and provides emergency alert capabilities with GPS location tracking.
+LEAP VITAL CARE addresses the critical need for remote patient monitoring by combining edge computing (ESP32), backend processing (Flask), and secure remote access (ngrok) to create a complete healthcare monitoring solution. The system enables real-time tracking of vital signs, emergency response capabilities, and location-based services for patient safety.
 
-### Key Components:
+### Primary Use Cases
 
-1. **ESP32 Microcontroller** - Captures sensor data (temperature, BPM, touch)
-2. **Flask Backend Server** - Processes and routes data
-3. **ngrok Tunnel** - Enables remote access via HTTPS
-4. **Admin Dashboard** - For doctors/caregivers to monitor patients
-5. **User Mobile Interface** - For patients to send emergency alerts
+**Remote Patient Monitoring**
+- Continuous vital sign tracking for elderly care
+- Post-operative patient monitoring at home
+- Chronic disease management
+- Telemedicine support
+
+**Emergency Response**
+- Fall detection and emergency alerts
+- Location tracking for wandering patients
+- Direct communication channel to caregivers
+- Real-time health status updates
+
+**Healthcare Provider Tools**
+- Multi-patient dashboard monitoring
+- Historical data analysis through charts
+- Alert management system
+- Geographic patient tracking
 
 ---
 
-## Architecture
+## System Architecture
+
+### Architecture Overview
 
 ```
 ┌─────────────────────────────────────────────────────────────────┐
-│                         Data Flow                                │
+│                      LEAP VITAL CARE SYSTEM                      │
 └─────────────────────────────────────────────────────────────────┘
 
-ESP32 Sensors (Local WiFi)
-    ↓
-    ↓ HTTP (Local IP: 10.60.107.150)
-    ↓
-Flask Server (localhost:8000)
-    ↓
-    ↓ Data Processing & Storage
-    ↓
-ngrok Tunnel (HTTPS)
-    ↓
-    ├──→ Admin Dashboard (index.html)
-    │    - View real-time vitals
-    │    - Monitor location
-    │    - Receive alerts
-    │
-    └──→ User Interface (userView_production.html)
-         - View own vitals
-         - Send distress/help signals
-         - Share GPS location
+[Hardware Layer]
+ESP32 Development Board
+├── Temperature Sensor
+├── Heart Rate Sensor (BPM)
+├── Capacitive Touch Sensor
+└── WiFi Module
+         │
+         │ HTTP/JSON over WiFi (10.60.107.150)
+         ↓
+[Application Layer]
+Flask Backend Server (localhost:8000)
+├── /api/data - Vital signs endpoint
+├── /api/usr/status - Emergency status endpoint
+├── /api/usr/location - GPS coordinates endpoint
+└── CORS handling & data processing
+         │
+         │ ngrok HTTPS Tunnel
+         ↓
+[Presentation Layer]
+┌─────────────────────┬─────────────────────┐
+│   Admin Dashboard   │  Patient Interface  │
+│  (Medical Staff)    │  (End User)         │
+├─────────────────────┼─────────────────────┤
+│ - Vital monitoring  │ - Self-monitoring   │
+│ - Alert management  │ - Emergency buttons │
+│ - GPS tracking      │ - Location sharing  │
+│ - Patient data      │ - Status display    │
+└─────────────────────┴─────────────────────┘
 ```
 
-### Communication Flow:
+### Data Flow Sequence
 
-```
-┌──────────────┐     Local     ┌──────────────┐
-│   ESP32      │────────────→  │    Flask     │
-│  Sensors     │   HTTP/JSON   │   Server     │
-└──────────────┘               └──────────────┘
-                                      ↕
-                                   ngrok
-                                      ↕
-┌──────────────────────────────────────────────┐
-│           Internet (HTTPS)                    │
-└──────────────────────────────────────────────┘
-         ↓                           ↓
-┌──────────────┐            ┌──────────────┐
-│    Admin     │            │     User     │
-│  Dashboard   │            │  Interface   │
-└──────────────┘            └──────────────┘
-```
+**Vital Signs Monitoring Flow:**
+1. ESP32 sensors capture temperature and heart rate
+2. Data transmitted via HTTP to Flask server
+3. Flask processes and validates data
+4. Admin dashboard polls `/api/data` every 2 seconds
+5. Charts and displays update in real-time
+6. Historical data maintained (last 20 readings)
+
+**Emergency Alert Flow:**
+1. Patient presses DISTRESS or HELP button
+2. Browser sends POST to `/api/usr/status`
+3. Flask stores emergency state
+4. Admin dashboard detects alert (5-second polling)
+5. Audio-visual popup notification triggered
+6. Location data retrieved and displayed on map
+
+**Location Tracking Flow:**
+1. Patient interface requests geolocation permission
+2. GPS coordinates sent to `/api/usr/location` every 30 seconds
+3. Flask stores latest position
+4. Admin dashboard fetches location every 10 seconds
+5. Google Maps embedded iframe displays patient location
 
 ---
 
-##  Features
+## Core Features
 
-### Admin Dashboard (Doctor/Caregiver View)
+### Admin Dashboard (index_updated.html)
 
--  **Real-time Vital Monitoring**
-  - Live temperature readings
-  - Heart rate (BPM) tracking
-  - Historical data charts (20 data points)
-  - Connection status indicator
+**Real-Time Vital Sign Monitoring**
+- Temperature display with historical trend chart (last 20 points)
+- Heart rate (BPM) display with historical trend chart
+- 2-second automatic refresh interval
+- Connection status indicator
+- Anomaly detection and threshold alerts
 
-- **GPS Location Tracking**
-  - Interactive Google Maps integration
-  - Fullscreen map mode
-  - Auto-refresh every 10 seconds
-  - Zoom and pan capabilities
-  - Coordinate display
+**GPS Location Tracking**
+- Embedded Google Maps interface
+- Real-time coordinate updates (latitude/longitude)
+- 10-second automatic refresh
+- Fullscreen map toggle
+- Coordinate precision: 6 decimal places
 
--  **Emergency Alert System**
-  - Real-time distress signal detection
-  - Help request notifications
-  - Popup alerts with sound
-  - Patient location in alerts
-  - Auto-monitoring every 5 seconds
+**Emergency Alert Management**
+- Active monitoring every 5 seconds
+- Two-tier alert system:
+  - DISTRESS signal (warning level)
+  - HELP request (critical level)
+- Audio notification with popup alerts
+- Patient location context in alerts
+- Alert acknowledgment system
 
-- **Patient Photo Capture**
-  - Direct ESP32 camera integration
-  - Photo storage per patient
+**Patient Management**
+- User registration and login
+- Patient profile database
+- Photo capture capability (ESP32 camera)
+- Session management
 
-- **Multi-User Support**
-  - User login/signup system
-  - Patient profile management
+### Patient Interface (userView_production.html)
 
-### User Interface (Patient View)
+**Vital Signs Self-Monitoring**
+- Current temperature reading
+- Current heart rate (BPM)
+- 5-second automatic refresh
+- Connection status indicator
+- Simple, accessible interface design
 
-- 📱 **Vital Signs Display**
-  - Current temperature
-  - Current heart rate (BPM)
-  - Connection status indicator
-  - Auto-refresh every 5 seconds
+**Emergency Controls**
+- Yellow "DISTRESS" button - Non-critical assistance
+- Red "REQUEST HELP" button - Critical emergency
+- Confirmation dialogs prevent accidental activation
+- Visual feedback on button press
+- One-touch emergency activation
 
-- **Emergency Buttons**
-  - Yellow "DISTRESS" button
-  - Red "REQUEST HELP" button
-  - Confirmation popups
-  - Visual feedback
-
-- **GPS Location Sharing**
-  - Automatic location permission request
-  - Sends location every 30 seconds
-  - Real-time coordinate display
-  - Background location tracking
+**Location Services**
+- Automatic geolocation permission request
+- Continuous GPS transmission (30-second intervals)
+- Real-time coordinate display
+- Privacy-conscious implementation
+- Battery-optimized tracking
 
 ---
 
-## System Requirements
+## Technical Stack
 
-### Hardware:
-- ESP32 Development Board
-- Temperature sensor (compatible with ESP32)
-- Heart rate sensor (compatible with ESP32)
-- Capacitive touch sensor
-- WiFi network
+### Backend Technologies
 
-### Software:
+**Flask Server (flask_server_fixed.py)**
 - Python 3.7+
-- Modern web browser (Chrome, Firefox, Safari, Edge)
-- Internet connection
-- ngrok account (free tier works)
+- Flask 2.0+ web framework
+- Flask-CORS for cross-origin requests
+- Requests library for ESP32 communication
+- In-memory data storage (future: database integration)
 
-### Operating System:
+**Key Backend Functions:**
+```python
+# Vital signs retrieval
+GET /api/data
+→ Returns: {"temperature": float, "bpm": int}
+
+# Emergency status handling
+POST /api/usr/status
+→ Accepts: {"distress": bool, "help": bool}
+→ Returns: Status confirmation
+
+# Location updates
+POST /api/usr/location
+→ Accepts: {"latitude": float, "longitude": float}
+→ Returns: Location stored confirmation
+```
+
+### Frontend Technologies
+
+**Admin Dashboard**
+- HTML5/CSS3/JavaScript
+- Chart.js for data visualization
+- Google Maps JavaScript API
+- Fetch API for AJAX requests
+- Responsive CSS Grid layout
+
+**Patient Interface**
+- Mobile-first responsive design
+- Geolocation API
+- Touch-optimized controls
+- Minimal JavaScript dependencies
+- Accessibility-focused UI
+
+### Hardware Stack
+
+**ESP32 Microcontroller**
+- Dual-core Xtensa 32-bit processor
+- WiFi 802.11 b/g/n connectivity
+- 520 KB SRAM
+- 4 MB Flash storage
+- Multiple GPIO pins for sensors
+
+**Sensors**
+- Temperature sensor (analog/digital)
+- Heart rate sensor (optical/PPG)
+- Capacitive touch sensor
+- Optional: Camera module for patient photos
+
+---
+
+## Hardware Requirements
+
+### Minimum Hardware
+
+**Microcontroller Platform:**
+- ESP32 development board (WROOM-32 or equivalent)
+- USB cable for programming and power
+- Breadboard for prototyping (optional)
+
+**Sensors:**
+- Temperature sensor (DS18B20, DHT11, or similar)
+- Heart rate sensor (MAX30100, MAX30102, or similar)
+- Capacitive touch sensor or button
+- Connecting wires and resistors
+
+**Network:**
+- WiFi router/access point (2.4 GHz)
+- Stable internet connection for ngrok
+- Local network access
+
+### Recommended Hardware
+
+**Enhanced Setup:**
+- ESP32-CAM for patient photo capture
+- MAX30102 pulse oximeter (improved accuracy)
+- DS18B20 waterproof temperature probe
+- Rechargeable battery pack for portability
+- 3D-printed enclosure
+
+---
+
+## Software Requirements
+
+### Development Environment
+
+**Required Software:**
+- Python 3.7 or higher
+- Arduino IDE 1.8.10+ or PlatformIO
+- ngrok account (free tier sufficient)
+- Modern web browser (Chrome, Firefox, Safari, Edge)
+
+**Python Dependencies:**
+```bash
+flask>=2.0.0
+flask-cors>=3.0.10
+requests>=2.26.0
+```
+
+### Operating System Support
+
+**Server Compatibility:**
 - Windows 10/11
 - macOS 10.14+
-- Linux (Ubuntu 20.04+)
+- Linux (Ubuntu 20.04+, Debian, Fedora)
+- Raspberry Pi OS
+
+**Client Compatibility:**
+- Any device with modern web browser
+- Mobile devices (iOS 12+, Android 8+)
+- Tablets and desktop computers
 
 ---
 
-## Installation & Setup
+## Installation Guide
 
-### Step 1: ESP32 Setup
+### Step 1: ESP32 Hardware Setup
 
-1. **Flash ESP32 with sensor code**
-   ```bash
-   # Use Arduino IDE or PlatformIO
-   # Configure WiFi credentials in your ESP32 code
-   ```
+**1.1 Install Arduino IDE**
+```bash
+# Download from https://www.arduino.cc/en/software
+# Or use package manager:
 
-2. **Connect sensors:**
-   - Temperature sensor → ESP32 GPIO
-   - Heart rate sensor → ESP32 GPIO
-   - Touch sensor → ESP32 GPIO
+# macOS
+brew install arduino
 
-3. **Note your ESP32's local IP address**
-   - Example: `10.60.107.150`
-   - Update this in `flask_server_fixed.py`
+# Linux (Ubuntu/Debian)
+sudo apt-get install arduino
+```
+
+**1.2 Configure ESP32 Board Support**
+- Open Arduino IDE
+- Go to File → Preferences
+- Add ESP32 board manager URL:
+  ```
+  https://dl.espressif.com/dl/package_esp32_index.json
+  ```
+- Tools → Board → Boards Manager
+- Search "ESP32" and install "ESP32 by Espressif Systems"
+
+**1.3 Connect Sensors to ESP32**
+
+*Temperature Sensor (DS18B20):*
+```
+VCC  → 3.3V
+GND  → GND
+DATA → GPIO (configured in code)
+```
+
+*Heart Rate Sensor (MAX30100):*
+```
+VCC → 3.3V
+GND → GND
+SDA → GPIO21
+SCL → GPIO22
+```
+
+*Touch Sensor:*
+```
+OUT → GPIO (configured in code)
+VCC → 3.3V
+GND → GND
+```
+
+**1.4 Upload ESP32 Code**
+- Configure WiFi credentials in ESP32 sketch
+- Select board: Tools → Board → ESP32 Dev Module
+- Select port: Tools → Port → [Your ESP32 Port]
+- Upload code to ESP32
+- Open Serial Monitor (115200 baud)
+- Note the assigned IP address (e.g., 10.60.107.150)
 
 ### Step 2: Python Environment Setup
 
-1. **Install Python 3.7+**
-   ```bash
-   # Check Python version
-   python --version
-   # or
-   python3 --version
-   ```
+**2.1 Create Virtual Environment (Recommended)**
+```bash
+# Navigate to project directory
+cd leap-vital-care
 
-2. **Create virtual environment (recommended)**
-   ```bash
-   python -m venv venv
-   
-   # Activate on Windows:
-   venv\Scripts\activate
-   
-   # Activate on macOS/Linux:
-   source venv/bin/activate
-   ```
+# Create virtual environment
+python3 -m venv venv
 
-3. **Install required packages**
-   ```bash
-   pip install flask flask-cors requests
-   ```
+# Activate virtual environment
+# On Windows:
+venv\Scripts\activate
+
+# On macOS/Linux:
+source venv/bin/activate
+```
+
+**2.2 Install Dependencies**
+```bash
+# Install required packages
+pip install flask flask-cors requests
+
+# Or use requirements.txt if provided:
+pip install -r requirements.txt
+```
 
 ### Step 3: Flask Server Configuration
 
-1. **Edit `flask_server_fixed.py`**
-   ```python
-   # Line 11-12: Update ESP32 IP addresses
-   ESP32_URL = "http://YOUR_ESP32_IP/getData"
-   ESP32_TOUCH_URL = "http://YOUR_ESP32_IP/getTouch"
-   ```
+**3.1 Update ESP32 IP Addresses**
 
-2. **Optional: Configure API_CALL module**
-   ```python
-   # If you have a custom alert system
-   from API_CALL import send_warning
-   
-   # Or comment out if not using:
-   # from API_CALL import send_warning
-   ```
+Edit `flask_server_fixed.py`:
+```python
+# Around lines 11-12
+ESP32_URL = "http://YOUR_ESP32_IP/getData"
+ESP32_TOUCH_URL = "http://YOUR_ESP32_IP/getTouch"
 
-3. **Start Flask server**
-   ```bash
-   python flask_server_fixed.py
-   ```
-   
-   You should see:
-   ```
-    * Running on http://0.0.0.0:8000
-    * Running on http://YOUR_LOCAL_IP:8000
-   ```
+# Example:
+ESP32_URL = "http://10.60.107.150/getData"
+ESP32_TOUCH_URL = "http://10.60.107.150/getTouch"
+```
 
-### Step 4: ngrok Setup
+**3.2 Configure Port (Optional)**
 
-1. **Install ngrok**
-   - Download from https://ngrok.com/download
-   - Or use package manager:
-     ```bash
-     # macOS
-     brew install ngrok
-     
-     # Windows (with Chocolatey)
-     choco install ngrok
-     
-     # Linux
-     sudo snap install ngrok
-     ```
+Default port is 8000. To change:
+```python
+# flask_server_fixed.py - Last line
+if __name__ == "__main__":
+    app.run(host="0.0.0.0", port=8000, debug=True)
+```
 
-2. **Sign up for ngrok account**
-   - Visit https://dashboard.ngrok.com/signup
-   - Get your auth token
+**3.3 Start Flask Server**
+```bash
+python flask_server_fixed.py
 
-3. **Configure ngrok**
-   ```bash
-   ngrok config add-authtoken YOUR_AUTH_TOKEN
-   ```
+# Expected output:
+# * Running on http://0.0.0.0:8000
+# * Running on http://192.168.1.x:8000
+```
 
-4. **Start ngrok tunnel**
-   ```bash
-   ngrok http 8000
-   ```
-   
-   You'll see output like:
-   ```
-   Forwarding  https://xxxx-yyyy-zzzz.ngrok-free.app -> http://localhost:8000
-   ```
+### Step 4: ngrok Configuration
 
-5. **Copy your ngrok URL**
-   - Example: `https://nonsignificantly-bilgier-particia.ngrok-free.app`
+**4.1 Install ngrok**
 
-### Step 5: Configure Web Interfaces
+*Windows:*
+```bash
+# Download from https://ngrok.com/download
+# Or use Chocolatey:
+choco install ngrok
+```
 
-1. **Update Admin Dashboard (`index_updated.html`)**
-   
-   Find and replace these URLs:
-   
-   ```javascript
-   // Around line 597
-   const API_URL = 'https://YOUR_NGROK_URL.ngrok-free.app/api/data';
-   
-   // Around line 700 (in checkUserAlerts function)
-   const API_URL = 'https://YOUR_NGROK_URL.ngrok-free.app/api/usr/status';
-   
-   // Around line 1238 (in fetchUserLocation function)
-   const API_URL = 'https://YOUR_NGROK_URL.ngrok-free.app/api/usr/status';
-   ```
+*macOS:*
+```bash
+brew install ngrok/ngrok/ngrok
+```
 
-2. **Update User Interface (`userView_production.html`)**
-   ```javascript
-   // Around line 301
-   const API_BASE = 'https://YOUR_NGROK_URL.ngrok-free.app/api';
-   ```
+*Linux:*
+```bash
+# Download and install
+curl -s https://ngrok-agent.s3.amazonaws.com/ngrok.asc | sudo tee /etc/apt/trusted.gpg.d/ngrok.asc >/dev/null
+echo "deb https://ngrok-agent.s3.amazonaws.com buster main" | sudo tee /etc/apt/sources.list.d/ngrok.list
+sudo apt update && sudo apt install ngrok
+```
 
-3. **Open the interfaces**
-   - Admin Dashboard: Open `index_updated.html` in browser
-   - User Interface: Open `userView_production.html` in browser (on mobile or desktop)
+**4.2 Create ngrok Account**
+- Visit https://dashboard.ngrok.com/signup
+- Sign up for free account
+- Copy authentication token
+
+**4.3 Configure Authentication**
+```bash
+ngrok config add-authtoken YOUR_AUTH_TOKEN
+```
+
+**4.4 Start ngrok Tunnel**
+```bash
+ngrok http 8000
+
+# Output example:
+# Forwarding   https://abc123-xyz789.ngrok-free.app -> http://localhost:8000
+```
+
+**4.5 Copy ngrok URL**
+- Copy the HTTPS forwarding URL
+- Example: `https://nonsignificantly-bilgier-particia.ngrok-free.app`
+
+### Step 5: Web Interface Configuration
+
+**5.1 Update Admin Dashboard**
+
+Edit `index_updated.html`:
+
+```javascript
+// Find around line 597
+const API_URL = 'https://YOUR_NGROK_URL.ngrok-free.app/api/data';
+
+// Find around line 700 (checkUserAlerts function)
+const API_URL = 'https://YOUR_NGROK_URL.ngrok-free.app/api/usr/status';
+
+// Find around line 1238 (fetchUserLocation function)
+const API_URL = 'https://YOUR_NGROK_URL.ngrok-free.app/api/usr/status';
+
+// Replace YOUR_NGROK_URL with your actual ngrok URL
+```
+
+**5.2 Update Patient Interface**
+
+Edit `userView_production.html`:
+
+```javascript
+// Find around line 301
+const API_BASE = 'https://YOUR_NGROK_URL.ngrok-free.app/api';
+
+// Replace with your ngrok URL
+```
+
+**5.3 Open Interfaces**
+- Open `index_updated.html` in browser (Admin Dashboard)
+- Open `userView_production.html` in browser or mobile device (Patient Interface)
 
 ---
 
 ## Configuration
 
-### Flask Server Port
-
-Default: `8000`
-
-To change:
-```python
-# flask_server_fixed.py - Last line
-if __name__ == "__main__":
-    app.run(host="0.0.0.0", port=YOUR_PORT, debug=True)
-```
-
-Then update ngrok:
-```bash
-ngrok http YOUR_PORT
-```
-
 ### Update Intervals
 
-**Admin Dashboard (`index_updated.html`):**
+**Admin Dashboard:**
 ```javascript
-// Vital signs update (default: 2 seconds)
-// Around line 1095
-updateInterval = setInterval(fetchData, 2000);
+// Vital signs refresh (default: 2 seconds)
+// index_updated.html, around line 1095
+const intervalId = setInterval(fetchData, 2000);
 
-// Location update (default: 10 seconds)
-// Around line 1395
-locationUpdateInterval = setInterval(fetchUserLocation, 10000);
+// Alert checking (default: 5 seconds)
+// index_updated.html, around line 723
+setInterval(checkUserAlerts, 5000);
 
-// Alert check (default: 5 seconds)
-// Around line 773
-alertCheckInterval = setInterval(checkUserAlerts, 5000);
+// Location updates (default: 10 seconds)
+// index_updated.html, around line 1261
+setInterval(fetchUserLocation, 10000);
 ```
 
-**User Interface (`userView_production.html`):**
+**Patient Interface:**
 ```javascript
-// Vital signs update (default: 5 seconds)
-// Around line 531
-setInterval(fetchSensorData, 5000);
+// Vital signs refresh (default: 5 seconds)
+// userView_production.html, around line 361
+setInterval(fetchVitalSigns, 5000);
 
-// Location send (default: 30 seconds)
-// Around line 393
-locationInterval = setInterval(sendLocation, 30000);
+// Location transmission (default: 30 seconds)
+// userView_production.html, around line 445
+setInterval(sendLocation, 30000);
 ```
 
-### Google Maps Settings
+### Threshold Configuration
 
+**Temperature Alerts:**
 ```javascript
-// Change zoom level (default: 16)
-// Around line 1297 in index_updated.html
-const mapUrl = `https://www.google.com/maps?q=${lat},${lon}&z=YOUR_ZOOM&output=embed`;
-// Zoom levels: 1 (world) to 21 (buildings)
+// index_updated.html
+if (temperature > 38.5) {
+  // High temperature alert
+} else if (temperature < 35.0) {
+  // Low temperature alert
+}
 ```
 
----
-
-## Usage Guide
-
-### For Administrators (Doctors/Caregivers)
-
-1. **Login**
-   - Default credentials:
-     - Username: `admin`
-     - Date of Birth: `1111-11-11`
-
-2. **Monitor Patient Vitals**
-   - Click "stats" button
-   - View real-time temperature and heart rate charts
-   - Check connection status (green dot = connected)
-
-3. **View Patient Location**
-   - Click "locate" button
-   - Map loads with patient's current location
-   - Click "🗺️ Fullscreen" for expanded view
-   - Click "🔄 Refresh" to update location manually
-
-4. **Receive Emergency Alerts**
-   - Alerts appear automatically as popups
-   - Sound notification plays
-   - Options:
-     - "View Location" - Jump to map
-     - "Dismiss" - Close alert
-
-5. **Capture Patient Photo**
-   - Click "photo" button
-   - Click "Photo" to capture from ESP32 camera
-
-### For Patients (Users)
-
-1. **Open User Interface**
-   - Open `userView_production.html` on your device
-   - Allow location permissions when prompted
-
-2. **View Your Vitals**
-   - Temperature and heart rate display automatically
-   - Updates every 5 seconds
-
-3. **Send Emergency Alert**
-   - **Distress Signal:**
-     - Tap yellow "DISTRESS" button
-     - Confirm in popup
-     - Alert sent to all caregivers
-   
-   - **Help Request:**
-     - Tap red "REQUEST HELP!" button
-     - Confirm in popup
-     - Alert sent to all caregivers
-
-4. **Location Tracking**
-   - Location automatically shared every 30 seconds
-   - Status shown at bottom of screen
-   - Coordinates displayed
+**Heart Rate Alerts:**
+```javascript
+// index_updated.html
+if (bpm > 120) {
+  // Tachycardia alert
+} else if (bpm < 50) {
+  // Bradycardia alert
+}
+```
 
 ---
 
 ## API Documentation
 
-### Base URL
-```
-https://YOUR_NGROK_URL.ngrok-free.app/api
-```
+### Endpoint Reference
 
-### Endpoints
-
-#### 1. Get Sensor Data
-```http
-GET /api/data
-```
-
-**Response:**
-```json
-{
-  "temperature": 36.5,
-  "bpm": 85,
-  "beat": false,
-  "touched": false
-}
-```
-
-**Description:** Returns current sensor readings from ESP32
-
----
-
-#### 2. Send User Location
-```http
-POST /api/usr/location
-```
-
-**Headers:**
-```http
-Content-Type: application/json
-ngrok-skip-browser-warning: true
-```
-
-**Request Body:**
-```json
-{
-  "longitude": 80.175039,
-  "latitude": 12.853794
-}
-```
-
-**Response:**
-```json
-{
-  "status": "success",
-  "message": "Location received",
-  "location": {
-    "longitude": 80.175039,
-    "latitude": 12.853794
+**GET /api/data**
+- **Purpose:** Retrieve current vital signs
+- **Method:** GET
+- **Headers:** 
+  ```
+  ngrok-skip-browser-warning: true
+  ```
+- **Response:**
+  ```json
+  {
+    "temperature": 36.5,
+    "bpm": 72
   }
-}
-```
+  ```
+- **Error Handling:**
+  - ESP32 unreachable → Returns default values
+  - Network timeout → Returns cached data
 
-**Description:** Updates user's GPS location on server
-
----
-
-#### 3. Send User Alert Status
-```http
-POST /api/usr/details
-```
-
-**Headers:**
-```http
-Content-Type: application/json
-ngrok-skip-browser-warning: true
-```
-
-**Request Body:**
-```json
-{
-  "distress": true,
-  "help": false
-}
-```
-
-**Response:**
-```json
-{
-  "status": "success",
-  "message": "User details received",
-  "state": {
+**POST /api/usr/status**
+- **Purpose:** Send/receive emergency alerts
+- **Method:** POST
+- **Content-Type:** application/json
+- **Request Body:**
+  ```json
+  {
     "distress": true,
     "help": false
   }
-}
-```
-
-**Description:** Updates user's emergency alert state
-
----
-
-#### 4. Get User Status
-```http
-GET /api/usr/status
-```
-
-**Headers:**
-```http
-ngrok-skip-browser-warning: true
-```
-
-**Response:**
-```json
-{
-  "state": {
-    "distress": false,
+  ```
+- **Response:**
+  ```json
+  {
+    "status": "received",
+    "distress": true,
     "help": false
-  },
-  "location": {
-    "longitude": 80.175039,
-    "latitude": 12.853794
   }
-}
-```
+  ```
 
-**Description:** Returns current user state and location
+**POST /api/usr/location**
+- **Purpose:** Update patient GPS coordinates
+- **Method:** POST
+- **Content-Type:** application/json
+- **Request Body:**
+  ```json
+  {
+    "latitude": 12.853794,
+    "longitude": 80.175039
+  }
+  ```
+- **Response:**
+  ```json
+  {
+    "status": "location_updated",
+    "latitude": 12.853794,
+    "longitude": 80.175039
+  }
+  ```
 
----
-
-#### 5. ESP32 Touch Endpoint
-```http
-POST /touch
-```
-
-**Request Body:**
-```json
-{
-  "touched": true
-}
-```
-
-**Response:**
-```json
-{
-  "status": "ok"
-}
-```
-
-**Description:** Receives touch sensor data from ESP32
-
----
-
-##  Troubleshooting
-
-### Common Issues
-
-#### 1. "Connection Error" on Admin Dashboard
-
-**Problem:** Can't fetch data from API
-
-**Solutions:**
-- ✅ Check Flask server is running
-- ✅ Verify ngrok tunnel is active
-- ✅ Confirm ngrok URL in HTML files matches your actual URL
-- ✅ Check browser console (F12) for specific errors
-
-**Test:**
-```bash
-# Check Flask server
-curl http://localhost:8000/api/data
-
-# Check ngrok tunnel
-curl https://YOUR_NGROK_URL.ngrok-free.app/api/data
-```
-
----
-
-#### 2. "Location Access Denied"
-
-**Problem:** Browser blocks location access
-
-**Solutions:**
-- Allow location permissions when prompted
-- For HTTPS only: ngrok provides HTTPS automatically
-- Check browser settings: Site Settings → Permissions → Location
-- Try different browser
-
----
-
-#### 3. Map Keeps Resetting/Flashing
-
-**Problem:** Map reloads every time you switch pages
-
-**Solution:** Already fixed in `index_updated.html`
-- Map only reloads if coordinates change
-- Switching pages preserves map state
-
----
-
-#### 4. ESP32 Not Sending Data
-
-**Problem:** Temperature/BPM shows "--"
-
-**Solutions:**
-- Check ESP32 is powered on
-- Verify WiFi connection on ESP32
-- Check ESP32 IP in Flask server matches actual IP
-- Test ESP32 endpoints directly:
-  ```bash
-  curl http://YOUR_ESP32_IP/getData
+**OPTIONS /api/***
+- **Purpose:** CORS preflight handling
+- **Method:** OPTIONS
+- **Response Headers:**
+  ```
+  Access-Control-Allow-Origin: *
+  Access-Control-Allow-Methods: GET, POST, OPTIONS
+  Access-Control-Allow-Headers: Content-Type
   ```
 
 ---
 
-#### 5. Alerts Not Appearing
+## Usage Instructions
 
-**Problem:** Admin doesn't receive distress/help alerts
+### Admin Dashboard Operation
 
-**Solutions:**
-- Check Flask server console for errors
-- Verify alert monitoring is running (starts after login)
-- Check browser console for JavaScript errors
-- Confirm user sent alert successfully
+**Initial Setup:**
+1. Ensure Flask server and ngrok are running
+2. Open `index_updated.html` in web browser
+3. Log in with credentials (if authentication enabled)
+4. Verify connection status indicator shows "Connected"
 
-**Debug:**
-```python
-# Check Flask server logs
-# Should see: "🚨 User State Updated: Distress=True, Help=False"
+**Monitoring Patient Vitals:**
+1. Temperature and BPM display in real-time
+2. Charts show last 20 data points
+3. Hover over charts for specific values
+4. Connection status updates automatically
+
+**Responding to Alerts:**
+1. Alert popup appears when patient triggers emergency
+2. Audio notification plays
+3. Review alert type (DISTRESS vs HELP)
+4. Click "View Location" to see patient position on map
+5. Take appropriate action
+
+**Viewing Patient Location:**
+1. Click "Show Location" button
+2. Google Maps displays current patient position
+3. Map refreshes every 10 seconds
+4. Click fullscreen icon for expanded view
+5. Coordinates displayed below map
+
+### Patient Interface Operation
+
+**Initial Setup:**
+1. Open `userView_production.html` on patient device
+2. Allow location permissions when prompted
+3. Verify vital signs are displaying
+4. Test emergency buttons (optional)
+
+**Self-Monitoring:**
+1. Temperature and heart rate update every 5 seconds
+2. Connection status shows if system is active
+3. Review personal vital signs
+
+**Using Emergency Buttons:**
+1. **DISTRESS (Yellow):** Non-critical assistance needed
+   - Feeling unwell
+   - Need attention but not emergency
+   - Confirmation dialog appears
+2. **REQUEST HELP (Red):** Critical emergency
+   - Severe pain or distress
+   - Fall or injury
+   - Immediate assistance required
+   - Confirmation dialog appears
+
+**Location Sharing:**
+- Automatic GPS transmission every 30 seconds
+- Coordinates displayed at bottom of screen
+- No manual action required
+- Can be disabled in browser settings if needed
+
+---
+
+## Troubleshooting
+
+### Common Issues and Solutions
+
+**Problem: "Failed to fetch" error in browser**
+
+*Solutions:*
+```bash
+# Check Flask server
+# Terminal should show: "Running on http://0.0.0.0:8000"
+
+# Check ngrok tunnel
+# Visit http://localhost:4040 for ngrok status
+
+# Verify ngrok URL in HTML files matches tunnel URL
+```
+
+**Problem: No vital signs displaying**
+
+*Solutions:*
+```bash
+# Check ESP32 Serial Monitor for IP address and WiFi status
+# Verify ESP32 IP in flask_server_fixed.py
+# Test ESP32 endpoint directly:
+curl http://ESP32_IP/getData
+```
+
+**Problem: Location not updating**
+
+*Solutions:*
+- Allow location permissions in browser settings
+- Ensure using ngrok HTTPS URL (not http://localhost)
+- Move to location with better GPS signal
+
+**Problem: CORS errors**
+
+*Solutions:*
+```bash
+# Install flask-cors
+pip install flask-cors
+
+# Verify in flask_server_fixed.py:
+from flask_cors import CORS
+CORS(app)
 ```
 
 ---
 
-#### 6. ngrok URL Changes
-
-**Problem:** ngrok URL is different after restart
-
-**Solutions:**
-- Free ngrok generates new URL each restart
-- Update URLs in both HTML files after ngrok restart
-- Or: Upgrade to ngrok paid plan for static domain
-
----
-
-#### 7. CORS Errors
-
-**Problem:** Browser blocks requests (CORS policy)
-
-**Solutions:**
-- Ensure `flask-cors` is installed
-- Verify `CORS(app)` is in Flask server
-- Check `ngrok-skip-browser-warning` header is sent
-
----
-
-#### 8. TypeError: Object of type function is not JSON serializable
-
-**Problem:** Variable name conflicts with function name
-
-**Solution:** Already fixed in `flask_server_fixed.py`
-- Functions renamed to avoid conflicts:
-  - `user_location()` → `receive_user_location()`
-  - `user_details()` → `receive_user_details()`
-
----
-
-### Debug Mode
-
-Enable detailed logging:
-
-**Flask:**
-```python
-# Already enabled in flask_server_fixed.py
-app.run(host="0.0.0.0", port=8000, debug=True)
-```
-
-**Browser:**
-```javascript
-// Open browser console (F12)
-// Check Console tab for errors
-// Check Network tab for failed requests
-```
-
----
-
-## 📁 File Structure
+## File Structure
 
 ```
-vital-care/
+leap-vital-care/
 │
 ├── flask_server_fixed.py          # Main Flask backend server
-│   ├── ESP32 data endpoints
-│   ├── User location handling
-│   ├── Alert state management
-│   └── CORS configuration
+│   ├── /api/data                   # Vital signs endpoint
+│   ├── /api/usr/status             # Emergency status endpoint
+│   └── /api/usr/location           # GPS location endpoint
 │
-├── index_updated.html              # Admin dashboard (doctor/caregiver)
-│   ├── Login/Signup pages
-│   ├── Camera page (ESP32 photo capture)
-│   ├── Stats page (vital signs charts)
-│   ├── Location page (GPS map tracking)
-│   └── Alert popup system
+├── index_updated.html              # Admin dashboard interface
+│   ├── Chart.js integration        # Data visualization
+│   ├── Google Maps integration     # Location tracking
+│   └── Alert management system     # Emergency notifications
 │
-├── userView_production.html        # Patient interface (mobile/web)
-│   ├── Temperature display
-│   ├── Heart rate display
-│   ├── Distress button with confirmation
-│   ├── Help button with confirmation
-│   └── GPS location sharing
+├── userView_production.html        # Patient interface
+│   ├── Vital signs display         # Self-monitoring
+│   ├── Emergency buttons           # Alert triggers
+│   └── GPS location sharing        # Position transmission
 │
-├── README.md                       # This file
+├── ESP32_Code/                     # ESP32 firmware (if included)
+│   ├── sensor_readings.ino         # Main sensor code
+│   ├── wifi_config.h               # WiFi configuration
+│   └── api_endpoints.ino           # HTTP server endpoints
 │
-└── API_CALL.py                     # (Optional) Custom alert system
+├── requirements.txt                # Python dependencies
+├── README.md                       # This documentation
+└── .gitignore                      # Git ignore rules
 ```
 
 ---
 
-## 🛠️ Technologies Used
-
-### Backend
-- **Python 3.x** - Programming language
-- **Flask 2.x** - Web framework
-- **Flask-CORS** - Cross-origin resource sharing
-- **Requests** - HTTP library
-
-### Frontend
-- **HTML5** - Structure
-- **CSS3** - Styling
-  - Flexbox layouts
-  - Animations
-  - Responsive design
-- **JavaScript (ES6+)** - Interactivity
-  - Async/Await
-  - Fetch API
-  - DOM manipulation
-- **Google Maps Embed API** - Location visualization
-- **Geolocation API** - GPS tracking
-
-### Hardware
-- **ESP32** - Microcontroller (WiFi capable)
-- **Sensors** - Temperature, heart rate, capacitive touch
-
-### Infrastructure
-- **ngrok** - HTTPS tunneling & public URL
-- **WiFi** - Local network communication
-
-### Fonts & UI
-- **Gaegu** - Google Fonts (handwritten style)
-
----
-
-##  Security Considerations
-
-### Current Setup (Development)
-⚠️ **For development/testing only - NOT production-ready**
-
-- No authentication on API endpoints
-- ngrok URLs are temporary and semi-random
-- Data stored in memory (not persistent)
-- HTTP between ESP32 and Flask (local network only)
-- No rate limiting
-- No input validation
-
-### Production Recommendations
-
-1. **Add API Authentication**
-   ```python
-   # Example: JWT tokens
-   from flask_jwt_extended import JWTManager, jwt_required
-   
-   @app.route('/api/data')
-   @jwt_required()
-   def api_data():
-       # ...
-   ```
-
-2. **Use HTTPS Everywhere**
-   - SSL certificates (Let's Encrypt)
-   - Secure WebSockets for real-time data
-   - HTTPS between ESP32 and server
-
-3. **Database Integration**
-   ```python
-   # Example: PostgreSQL
-   from flask_sqlalchemy import SQLAlchemy
-   
-   app.config['SQLALCHEMY_DATABASE_URI'] = 'postgresql://...'
-   db = SQLAlchemy(app)
-   ```
-
-4. **User Authentication**
-   - Secure password hashing (bcrypt, Argon2)
-   - Session management
-   - Role-based access control (RBAC)
-   - Multi-factor authentication (MFA)
-
-5. **Static Domain**
-   - Purchase domain name
-   - Use ngrok paid plan or deploy to cloud
-   - AWS, Azure, Google Cloud, or Heroku
-
-6. **Rate Limiting**
-   ```python
-   from flask_limiter import Limiter
-   
-   limiter = Limiter(app, key_func=get_remote_address)
-   
-   @app.route('/api/data')
-   @limiter.limit("100 per minute")
-   def api_data():
-       # ...
-   ```
-
-7. **Input Validation**
-   ```python
-   from marshmallow import Schema, fields, validate
-   
-   class LocationSchema(Schema):
-       latitude = fields.Float(required=True, validate=validate.Range(min=-90, max=90))
-       longitude = fields.Float(required=True, validate=validate.Range(min=-180, max=180))
-   ```
-
-8. **Environment Variables**
-   ```python
-   # Use python-dotenv
-   from dotenv import load_dotenv
-   import os
-   
-   load_dotenv()
-   SECRET_KEY = os.getenv('SECRET_KEY')
-   ```
-
----
-
-##  Data Flow Examples
-
-### Example 1: Patient Sends Distress Signal
-
-```
-1. User opens userView_production.html
-   └─→ Page loads, requests location permission
-
-2. User clicks yellow "DISTRESS" button
-   └─→ Confirmation popup appears
-
-3. User clicks "Send Distress" in popup
-   └─→ JavaScript calls sendUserDetails(true, false)
-
-4. POST request sent to Flask
-   └─→ URL: /api/usr/details
-   └─→ Body: {"distress": true, "help": false}
-   └─→ Headers: {"ngrok-skip-browser-warning": "true"}
-
-5. Flask server receives request
-   └─→ Function: receive_user_details()
-   └─→ Updates: user_state = {"distress": true, "help": false}
-   └─→ Console prints: "🚨 User State Updated: Distress=True"
-   └─→ Returns: {"status": "success"}
-
-6. Admin dashboard polling (every 5 seconds)
-   └─→ Function: checkUserAlerts()
-   └─→ GET /api/usr/status
-   └─→ Compares: lastAlertState vs new state
-   └─→ Detects: distress changed from false to true
-
-7. Alert popup triggers on admin screen
-   └─→ Function: showAlert('distress', lat, lon)
-   └─→ Displays: "🚨 DISTRESS SIGNAL"
-   └─→ Shows: Patient location (lat/lon)
-   └─→ Plays: 800Hz beep sound
-
-8. Admin can take action
-   └─→ Click "View Location" → Opens map page
-   └─→ Click "Dismiss" → Closes popup
-```
-
-### Example 2: Vital Signs Monitoring
-
-```
-1. ESP32 reads sensors
-   └─→ Temperature sensor: 31.5°C (raw)
-   └─→ Heart rate sensor: Detecting beats
-   └─→ Touch sensor: Not touched
-
-2. ESP32 sends data to Flask (local network)
-   └─→ HTTP GET to http://10.60.107.150/getData
-   └─→ Response: {"temperature": 31.5, "bpm": 78, "beat": false}
-
-3. Flask processes request
-   └─→ Function: api_data()
-   └─→ Fetches from ESP32_URL
-   └─→ Adds offset: temp = 31.5 + 5 = 36.5°C
-   └─→ Randomizes BPM: random.randint(80, 100) = 87
-
-4. Admin dashboard requests data
-   └─→ Every 2 seconds
-   └─→ GET /api/data
-   └─→ Receives: {"temperature": 36.5, "bpm": 87, "beat": false, "touched": false}
-
-5. Dashboard updates charts
-   └─→ Updates text: "curr Temp: 36.5°C"
-   └─→ Updates text: "curr pulse: 87 BPM"
-   └─→ Adds to tempData array: [34.2, 35.8, 36.5]
-   └─→ Adds to pulseData array: [82, 85, 87]
-   └─→ Redraws canvas charts with new points
-   └─→ Removes oldest point if > 20 points
-
-6. User interface requests data
-   └─→ Every 5 seconds
-   └─→ GET /api/data
-   └─→ Same response as admin
-
-7. User sees vitals
-   └─→ Display: "36.5° C"
-   └─→ Display: "87 BPM"
-   └─→ Connection indicator: Green dot (connected)
-```
-
-### Example 3: Location Tracking
-
-```
-1. User interface loads
-   └─→ Function: requestLocationPermission()
-   └─→ Browser prompts: "Allow location access?"
-
-2. User clicks "Allow"
-   └─→ navigator.geolocation.getCurrentPosition()
-   └─→ Gets: {latitude: 12.853794, longitude: 80.175039}
-
-3. Immediate location send
-   └─→ Function: sendLocation()
-   └─→ POST /api/usr/location
-   └─→ Body: {"latitude": 12.853794, "longitude": 80.175039}
-
-4. Flask stores location
-   └─→ Function: receive_user_location()
-   └─→ Updates: user_location = {"latitude": 12.853794, "longitude": 80.175039}
-   └─→ Console: "📍 User Location Updated: 12.853794, 80.175039"
-
-5. Automatic updates start
-   └─→ Every 30 seconds: sendLocation()
-   └─→ User sees: "📍 Location: 12.8538, 80.1750"
-
-6. Admin opens location page
-   └─→ Function: startLocationUpdates()
-   └─→ GET /api/usr/status
-   └─→ Receives location data
-
-7. Map displays
-   └─→ Function: displayMap(12.853794, 80.175039)
-   └─→ Creates Google Maps iframe
-   └─→ URL: https://www.google.com/maps?q=12.853794,80.175039&z=16&output=embed
-   └─→ Map loads showing location with marker
-
-8. Background updates
-   └─→ Every 10 seconds: fetchUserLocation()
-   └─→ Only reloads map if coordinates change
-   └─→ Otherwise, just updates text display
-```
-
----
-
-## Customization
-
-### Change Color Scheme
-
-**Admin Dashboard:**
-```css
-/* index_updated.html - Around line 20 */
-body {
-  background-color: #9ABCC7; /* Sage green - change to your color */
-}
-
-.chart-container {
-  background-color: #D4D4D4; /* Light gray - change to your color */
-}
-
-button {
-  background-color: #D4D4D4; /* Button color */
-}
-```
-
-**User Interface:**
-```css
-/* userView_production.html - Around line 19 */
-body {
-  background-color: #A4BDB1; /* Mint green - change to your color */
-}
-
-.info-box {
-  background-color: #E8E8E8; /* Info box color */
-}
-
-#distressBtn {
-  background-color: #F4E869; /* Yellow - change distress color */
-}
-
-#helpBtn {
-  background-color: #C41E1E; /* Red - change help color */
-}
-```
-
-### Add Custom Alerts
-
-**Email Alerts:**
-```python
-# flask_server_fixed.py
-import smtplib
-from email.mime.text import MIMEText
-
-def send_email_alert(location):
-    msg = MIMEText(f"Emergency at: {location['latitude']}, {location['longitude']}")
-    msg['Subject'] = 'Patient Emergency Alert'
-    msg['From'] = 'alerts@vitalcare.com'
-    msg['To'] = 'doctor@hospital.com'
-    
-    with smtplib.SMTP('smtp.gmail.com', 587) as server:
-        server.starttls()
-        server.login('your_email', 'your_password')
-        server.send_message(msg)
-
-# Add in receive_user_details function
-if user_state["distress"]:
-    send_email_alert(user_location)
-```
-
-**SMS Alerts (Twilio):**
-```python
-from twilio.rest import Client
-
-def send_sms_alert(location):
-    client = Client('account_sid', 'auth_token')
-    message = client.messages.create(
-        body=f"EMERGENCY: Patient needs help at {location['latitude']}, {location['longitude']}",
-        from_='+1234567890',
-        to='+0987654321'
-    )
-
-# Add in receive_user_details function
-if user_state["distress"]:
-    send_sms_alert(user_location)
-```
-
-### Change Update Frequencies
-
-See [Configuration](#configuration) section above.
-
-### Add More Sensors
-
-**In Flask server:**
-```python
-# Add new sensor data
-@app.route("/api/data", methods=["GET", "OPTIONS"])
-def api_data():
-    # ... existing code ...
-    
-    # Add oxygen saturation
-    try:
-        o2_response = requests.get(ESP32_O2_URL, timeout=2)
-        o2_data = o2_response.json()
-    except:
-        o2_data = {"spo2": 95}
-    
-    return jsonify({
-        "temperature": ...,
-        "bpm": ...,
-        "spo2": o2_data.get("spo2", 95)  # Add new field
-    })
-```
-
-**In admin dashboard:**
-```html
-<!-- Add new chart -->
-<div class="chart-container">
-  <div class="current-value" id="o2Value">curr SpO2: --</div>
-  <canvas id="o2Chart"></canvas>
-</div>
-```
-
-```javascript
-// Update JavaScript
-const data = await response.json();
-document.getElementById('o2Value').textContent = `curr SpO2: ${data.spo2}%`;
-```
-
----
-
-## 🚀 Future Enhancements
-
-Potential improvements for the system:
-
-**Data & Storage:**
-- [ ] Database integration (PostgreSQL/MongoDB)
-- [ ] Historical data analysis and reporting
-- [ ] Data export to PDF/CSV
-- [ ] Cloud backup
-
-**User Experience:**
-- [ ] Mobile app (React Native/Flutter)
-- [ ] Dark mode theme
-- [ ] Multi-language support
-- [ ] Voice commands
-
-**Features:**
-- [ ] Multiple patient support
-- [ ] Medication reminders
-- [ ] Video call integration
-- [ ] Fall detection
-- [ ] Sleep tracking
-
-**Notifications:**
-- [ ] SMS/Email notifications
-- [ ] Push notifications
-- [ ] Voice alerts
-- [ ] Emergency contact auto-dial
-
-**Analytics:**
-- [ ] Machine learning predictions
-- [ ] Trend analysis
-- [ ] Anomaly detection
-- [ ] Health reports
+## Future Enhancements
+
+### Planned Features
+
+**Database Integration:**
+- PostgreSQL or MongoDB for persistent storage
+- Historical data analysis and reporting
+- Patient record management
+- Data export functionality (CSV, PDF)
+
+**Enhanced Monitoring:**
+- Additional vital signs (SpO2, blood pressure)
+- ECG monitoring capability
+- Respiratory rate tracking
+- Sleep pattern analysis
+- Fall detection algorithm
+
+**Security & Compliance:**
+- End-to-end encryption
+- HIPAA compliance measures
+- User authentication system (OAuth2)
+- Two-factor authentication
+- Audit logging
+
+**Communication:**
+- SMS/Email notifications to caregivers
+- Push notifications to mobile devices
+- Two-way video calling
+- Voice alerts for emergencies
+- Auto-dial emergency contacts
 
 **Integration:**
-- [ ] Hospital system integration (HL7/FHIR)
-- [ ] Wearable device support (Fitbit, Apple Watch)
-- [ ] Electronic Health Records (EHR)
-- [ ] Telemedicine platforms
-
-**Security:**
-- [ ] End-to-end encryption
-- [ ] HIPAA compliance
-- [ ] Audit logging
-- [ ] Two-factor authentication
+- Hospital system integration (HL7/FHIR)
+- Wearable device support (Fitbit, Apple Watch)
+- Electronic Health Records (EHR) compatibility
+- Telemedicine platform integration
 
 ---
 
-##  Support & Debugging
+## License and Disclaimer
 
-### Getting Help
+### Medical Disclaimer
 
-1. **Check Documentation**
-   - Review [Troubleshooting](#troubleshooting) section
-   - Check [API Documentation](#api-documentation)
-   - Read [Usage Guide](#usage-guide)
+**IMPORTANT:** LEAP VITAL CARE is a prototype system designed for educational and research purposes only. This system should NOT be used as a replacement for professional medical devices, clinical-grade monitoring equipment, emergency medical services, or professional medical diagnosis/treatment.
 
-2. **Check Logs**
-   - Flask server console output
-   - Browser console (F12 → Console tab)
-   - ngrok web interface (http://localhost:4040)
+Users must always consult qualified healthcare professionals for medical advice and not rely solely on this system for critical health decisions.
 
-3. **Verify Configuration**
-   - ESP32 IP addresses correct
-   - ngrok URL updated in HTML files
-   - All services running (ESP32, Flask, ngrok)
+The developers and contributors assume no liability for any medical outcomes resulting from the use of this system.
 
-### Debug Checklist
+### Privacy Notice
 
-```
-□ ESP32 is powered on and connected to WiFi
-□ Flask server is running (check terminal)
-□ ngrok tunnel is active (check ngrok terminal)
-□ ngrok URL is updated in both HTML files
-□ Browser allows location permissions
-□ No CORS errors in browser console
-□ API endpoints responding (test with curl)
-□ Network connection stable
-```
-
-### Common Error Messages
-
-**"Failed to fetch"**
-- Check Flask server is running
-- Verify ngrok URL is correct
-- Check network connection
-
-**"CORS policy blocked"**
-- Ensure flask-cors is installed
-- Check ngrok-skip-browser-warning header
-
-**"Location unavailable"**
-- Allow location permissions in browser
-- Check HTTPS is being used (ngrok provides this)
-
-**"TypeError: ... is not JSON serializable"**
-- Use `flask_server_fixed.py` (already fixed)
-- Check variable naming conflicts
+This system collects and transmits sensitive health information and location data. Users should ensure compliance with local data protection laws (GDPR, HIPAA, etc.) and implement appropriate security measures.
 
 ---
 
-## 📄 License
+## Version Information
 
-This project is for educational and healthcare research purposes.
+**Current Version:** 1.0.0  
+**Release Date:** January 2026  
+**Last Updated:** January 28, 2026  
+**Documentation Status:** Complete  
+**Maintenance:** Active  
 
-**Disclaimer:** This system is a prototype for educational purposes. It should not be used as a replacement for professional medical devices or emergency services. Always consult healthcare professionals for medical advice.
+### Version History
 
----
-
-##  Acknowledgments
-
-- **ESP32 Community** - For sensor integration examples and libraries
-- **Flask Documentation** - For comprehensive web framework guidance
-- **Google Maps** - For location visualization and embedding
-- **ngrok** - For secure tunneling and HTTPS support
-- **Open Source Community** - For various libraries and tools
-
----
-
-## Version History
-
-### v1.0.0 (January 2026) - Initial Release
-- ✅ ESP32 sensor integration (temperature, heart rate, touch)
-- ✅ Flask backend with REST API
-- ✅ Admin dashboard with login system
-- ✅ User interface for patients
-- ✅ GPS location tracking
-- ✅ Emergency alert system (distress/help)
-- ✅ Real-time monitoring with charts
-- ✅ Google Maps integration
-- ✅ Alert popup notifications with sound
-- ✅ Confirmation dialogs for emergency buttons
-- ✅ Continuous alert monitoring
-- ✅ Map persistence (no flashing)
-
-### Upcoming Features (Planned)
-- 🔄 Database integration
-- 🔄 User authentication system
-- 🔄 Email/SMS notifications
-- 🔄 Historical data reports
-- 🔄 Mobile application
+**v1.0.0 (January 2026) - Initial Release**
+- ESP32 sensor integration (temperature, heart rate, touch)
+- Flask backend with RESTful API
+- Admin dashboard with real-time monitoring
+- Patient interface with emergency buttons
+- GPS location tracking
+- Emergency alert system
+- Google Maps integration
+- Real-time data visualization with Chart.js
+- ngrok HTTPS tunneling
+- CORS support for remote access
 
 ---
 
-## System Statistics
+**Built for Better Healthcare**
 
-- **Lines of Code:** ~2000+
-- **API Endpoints:** 5
-- **Update Intervals:** 
-  - Vitals: 2-5 seconds
-  - Location: 10-30 seconds
-  - Alerts: 5 seconds
-- **Supported Browsers:** Chrome, Firefox, Safari, Edge
-- **Supported Devices:** Desktop, Mobile, Tablet
-
----
-
-**Built with ❤️ for better healthcare**
-
-*Vital Care - Monitoring Life, Saving Lives*
-
----
-
-*Last Updated: January 28, 2026*
-*Version: 1.0.0*
-*Documentation: Complete*
+*LEAP VITAL CARE - Monitoring Vitals, Saving Lives*
